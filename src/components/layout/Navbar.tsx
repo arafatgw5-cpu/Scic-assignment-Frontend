@@ -53,13 +53,13 @@ export function Navbar() {
 
   const loggedOutLinks = [
     { href: "/explore", label: "Explore Careers" },
-    { href: "/dashboard/templates", label: "Templates" },
+    // { href: "/dashboard/templates", label: "Templates" },
   ];
 
   const loggedInLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/explore", label: "Explore", icon: Compass },
-    { href: "/dashboard/templates", label: "Templates", icon: FileText },
+    // { href: "/dashboard/templates", label: "Templates", icon: FileText },
     { href: "/dashboard/saved", label: "Saved Careers", icon: Bookmark },
   ];
 

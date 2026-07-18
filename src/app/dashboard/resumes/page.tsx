@@ -100,9 +100,9 @@ export default function ResumesPage() {
               <p className="text-xs text-muted-foreground mt-4">Updated {new Date(resume.updatedAt).toLocaleDateString()}</p>
             </CardContent>
             <CardFooter className="pt-0 flex gap-2 border-t px-6 py-4 bg-muted/20">
-              <Button variant="outline" size="sm" className="flex-1 gap-2">
+              {/* <Button variant="outline" size="sm" className="flex-1 gap-2">
                 <Edit className="h-4 w-4" /> Edit
-              </Button>
+              </Button> */}
               <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={async () => {
                 try {
                   const data = {
