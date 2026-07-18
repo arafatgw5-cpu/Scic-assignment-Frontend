@@ -1,6 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api` 
-  : "http://localhost:5001/api";
+// ✅ FIXED: API_BASE_URL duplication issue resolved
+const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+const API_BASE_URL = rawBaseUrl.endsWith("/api") ? rawBaseUrl : `${rawBaseUrl}/api`;
 
 let cachedAuthToken: string | null = null;
 
@@ -19,7 +19,7 @@ async function getAuthToken(): Promise<string | null> {
     console.error("Failed to fetch auth token", e);
   }
 
-  // Fallback: try reading it directly from document.cookie (since httpOnly: false is now enabled)
+  // Fallback: try reading it directly from document.cookie
   if (typeof document !== 'undefined') {
     const match = document.cookie.match(/(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=([^;]*)/);
     if (match) {
@@ -49,15 +49,8 @@ type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 interface GeneratedResume {
   professionalSummary: string;
   optimizedSkills: string[];
-  optimizedExperience: {
-    company: string;
-    role: string;
-    description: string;
-  }[];
-  optimizedProjects: {
-    name: string;
-    description: string;
-  }[];
+  optimizedExperience: { company: string; role: string; description: string; }[];
+  optimizedProjects: { name: string; description: string; }[];
 }
 
 interface ResumeAnalysis {
@@ -75,11 +68,7 @@ interface CareerRecommendation {
   expectedSalary: string;
   missingSkills: string[];
   reasoning: string;
-  learningRoadmap: {
-    step: number;
-    title: string;
-    description: string;
-  }[];
+  learningRoadmap: { step: number; title: string; description: string; }[];
 }
 
 interface ResumeDocument {
@@ -100,17 +89,23 @@ interface AnalyticsStats {
 interface CareerDocument {
   _id: string;
   title: string;
+  company: string;
+  companyLogo?: string;
   category: string;
-  salary: string;
-  experience: string;
-  location: string;
-  rating: number;
   description: string;
-  skills: string[];
+  location: string;
+  jobType: 'Remote' | 'Hybrid' | 'Onsite';
+  rating: number;
+  salaryRange: { min: number; max: number; currency: string; };
+  experienceLevel: 'Entry' | 'Mid' | 'Senior' | 'Executive';
+  requiredSkills: string[];
+  responsibilities: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── API CLIENT ────────────────────────────────────────────────────
-class ApiClient {
+export class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
 
@@ -130,42 +125,55 @@ class ApiClient {
       credentials: "include",
     };
 
-    const response = await fetch(url, config);
-    const json: ApiResponse<T> = await response.json();
+    try {
+      const response = await fetch(url, config);
 
-    if (!json.success) {
-      throw new Error((json as ApiErrorResponse).message || `API Error: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP Error: ${response.status} ${response.statusText}`);
+      }
+
+      const json: ApiResponse<T> = await response.json();
+
+      if (!json.success) {
+        throw new Error((json as ApiErrorResponse).message || `API Error: ${response.status}`);
+      }
+
+      return (json as ApiSuccessResponse<T>).data;
+    } catch (error: any) {
+      console.error(`API Request Failed: ${url}`, error);
+      
+      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        throw new Error(
+          'Network Error: Cannot connect to the backend server.\n' +
+          'Please check:\n' +
+          '1. Is the backend server running? (npm run dev)\n' +
+          '2. Is it running on port 5001? (Check .env.local)\n' +
+          '3. Are there CORS issues in the browser console?'
+        );
+      }
+      
+      throw error;
     }
-
-    return (json as ApiSuccessResponse<T>).data;
   }
 
-  // ─── Generic Methods ─────────────────────────────────────────────
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "GET" });
   }
 
   async post<T>(endpoint: string, body: Record<string, unknown>, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "POST",
-      body: JSON.stringify(body),
-    });
+    return this.request<T>(endpoint, { ...options, method: "POST", body: JSON.stringify(body) });
   }
 
   async put<T>(endpoint: string, body: Record<string, unknown>, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "PUT",
-      body: JSON.stringify(body),
-    });
+    return this.request<T>(endpoint, { ...options, method: "PUT", body: JSON.stringify(body) });
   }
 
   async del<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 
-  // ─── Dashboard Analytics ─────────────────────────────────────────
+  // ─── Dashboard Analytics ────────────────────────────────────────
   async getAnalytics(): Promise<AnalyticsStats> {
     return this.get<AnalyticsStats>("/analytics");
   }
@@ -175,8 +183,8 @@ class ApiClient {
     return this.put<any>("/profile", data);
   }
 
+  // ✅ FIXED: Change Password API Call
   async changePassword(currentPassword: string, newPassword: string): Promise<any> {
-    // Requires better-auth change password implementation or custom endpoint
     return this.post<any>("/auth/change-password", { currentPassword, newPassword });
   }
 
@@ -248,8 +256,15 @@ class ApiClient {
   }
 
   // ─── Careers ─────────────────────────────────────────────────────
-  async getCareers(): Promise<CareerDocument[]> {
-    return this.get<CareerDocument[]>("/careers");
+  async getCareers(params?: Record<string, string | number | boolean | undefined>): Promise<CareerDocument[]> {
+    const queryString = params
+      ? '?' + new URLSearchParams(
+          Object.entries(params)
+            .filter(([_, v]) => v !== undefined && v !== 'All' && v !== '')
+            .map(([k, v]) => [k, String(v)])
+        ).toString()
+      : '';
+    return this.get<CareerDocument[]>(`/careers${queryString}`);
   }
 
   async saveCareer(id: string): Promise<any> {
@@ -277,9 +292,7 @@ class ApiClient {
             expectedSalary: "$120k - $160k",
             missingSkills: ["GraphQL", "WebRTC"],
             reasoning: "Your strong background in React and UI development makes this a natural progression.",
-            learningRoadmap: [
-              { step: 1, title: "Learn GraphQL", description: "Master queries and mutations." }
-            ]
+            learningRoadmap: [{ step: 1, title: "Learn GraphQL", description: "Master queries and mutations." }]
           },
           {
             careerTitle: "Full Stack Engineer (Mock)",
@@ -287,9 +300,7 @@ class ApiClient {
             expectedSalary: "$130k - $170k",
             missingSkills: ["System Design", "AWS"],
             reasoning: "You have node.js experience, but need more cloud architecture skills.",
-            learningRoadmap: [
-              { step: 1, title: "AWS Solutions Architect", description: "Study for the associate cert." }
-            ]
+            learningRoadmap: [{ step: 1, title: "AWS Solutions Architect", description: "Study for the associate cert." }]
           }
         ];
       }
@@ -305,10 +316,7 @@ class ApiClient {
   // ─── PDF Generation ──────────────────────────────────────────────
   async downloadResumePdf(resumeData: GeneratedResume | ResumeDocument, filename: string = 'resume.pdf'): Promise<void> {
     const url = `${API_BASE_URL}/resumes/generate-pdf`;
-    
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
     const token = await getAuthToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;

@@ -664,7 +664,7 @@ interface ComposerProps {
   suggestions: string[];
   showSuggestions: boolean;
   // image understanding
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>; // <-- FIXED: Added '| null' here
   onFileSelected: (file: File) => void;
   onPasteImage: (e: React.ClipboardEvent) => void;
   hasImage: boolean;
@@ -1153,11 +1153,12 @@ export default function CareerChatPage() {
           setIsUploadingImage(false);
           if (xhr.status >= 200 && xhr.status < 300) {
             if (!receivedAnyChunk) {
-              // Non-streaming backend fallback: try JSON, else raw text.
+              // Non-streaming backend response shape:
               let finalText = xhr.responseText;
               try {
                 const json = JSON.parse(xhr.responseText);
-                finalText = json.text || json.message || json.content || xhr.responseText;
+                finalText =
+                  json.analysis || json.text || json.message || json.content || xhr.responseText;
               } catch {
                 // keep raw text
               }
@@ -1243,7 +1244,7 @@ export default function CareerChatPage() {
           <div>
             <h1 className="text-sm font-semibold text-foreground">SkillPilot Assistant</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              Gemini 2.5 Flash <span className="opacity-50">•</span>{" "}
+              SkillPilot AI <span className="opacity-50">•</span>{" "}
               {isUploadingImage ? "Uploading image..." : isTyping ? "Typing..." : "Online"}
             </p>
           </div>
@@ -1336,4 +1337,3 @@ export default function CareerChatPage() {
     </div>
   );
 }
-

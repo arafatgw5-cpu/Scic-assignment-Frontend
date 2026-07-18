@@ -11,10 +11,12 @@ import {
   LogOut,
   LayoutDashboard,
   Compass,
-  FileText,
   Bookmark,
   User,
   ChevronDown,
+  Info,
+  Mail,
+  Home
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -28,13 +30,11 @@ export function Navbar() {
 
   const isLoggedIn = !!session?.user;
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
     setProfileOpen(false);
   }, [pathname]);
 
-  // Close profile dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -52,21 +52,25 @@ export function Navbar() {
   };
 
   const loggedOutLinks = [
-    { href: "/explore", label: "Explore Careers" },
-    // { href: "/dashboard/templates", label: "Templates" },
+    { href: "/", label: "Home", icon: Home },
+    { href: "/explore", label: "Explore Careers", icon: Compass },
+    { href: "/about", label: "About", icon: Info },
+    { href: "/contact", label: "Contact", icon: Mail },
   ];
 
   const loggedInLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/explore", label: "Explore", icon: Compass },
-    // { href: "/dashboard/templates", label: "Templates", icon: FileText },
     { href: "/dashboard/saved", label: "Saved Careers", icon: Bookmark },
+    { href: "/about", label: "About", icon: Info },
+    { href: "/contact", label: "Contact", icon: Mail },
   ];
 
   const navLinks = isLoggedIn ? loggedInLinks : loggedOutLinks;
 
   const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/") return pathname === "/";
+    if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
     return pathname.startsWith(href);
   };
 
@@ -90,12 +94,13 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-3 py-2 rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 ${
                   isActive(link.href)
                     ? "text-primary bg-primary/10 font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
+                <link.icon className="h-4 w-4" />
                 {link.label}
               </Link>
             ))}
@@ -138,7 +143,7 @@ export function Navbar() {
                       <button className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-3 rounded-lg mx-1" style={{width: 'calc(100% - 8px)'}}>
                         <User className="h-4 w-4 text-muted-foreground" /> My Profile
                       </button>
-                    </Link>
+            </Link>
                     <Link href="/dashboard">
                       <button className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors flex items-center gap-3 rounded-lg mx-1" style={{width: 'calc(100% - 8px)'}}>
                         <LayoutDashboard className="h-4 w-4 text-muted-foreground" /> Dashboard
@@ -193,12 +198,13 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`block py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-3 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive(link.href)
                       ? "text-primary bg-primary/10"
                       : "text-foreground/80 hover:bg-muted"
                   }`}
                 >
+                  <link.icon className="h-4 w-4" />
                   {link.label}
                 </Link>
               ))}
