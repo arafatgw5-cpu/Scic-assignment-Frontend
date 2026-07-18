@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
@@ -21,12 +22,22 @@ import {
   X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, LayoutGroup } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  LayoutGroup,
+  type Transition,
+} from "framer-motion";
+
+const SPRING: Transition = { type: "spring", stiffness: 380, damping: 32 };
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const pathname = usePathname();
   const { data: session, isPending } = useSession();
@@ -63,27 +74,31 @@ export default function DashboardLayout({
       {/* Brand */}
       <div className="flex items-center gap-3 p-6">
         <motion.div
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-sm"
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.45)]"
           animate={{
             boxShadow: [
-              "0 0 0px hsl(var(--primary)/0)",
-              "0 0 16px hsl(var(--primary)/0.35)",
-              "0 0 0px hsl(var(--primary)/0)",
+              "0 4px 14px -2px hsl(var(--primary)/0.25)",
+              "0 4px 20px -1px hsl(var(--primary)/0.5)",
+              "0 4px 14px -2px hsl(var(--primary)/0.25)",
             ],
           }}
           transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         >
-          <span className="text-sm font-bold text-white">S</span>
+          <span className="text-sm font-bold tracking-tight text-white">S</span>
         </motion.div>
         <div>
-          <h2 className="text-base font-semibold tracking-tight">Dashboard</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Manage your career</p>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">
+            Dashboard
+          </h2>
+          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+            Manage your career
+          </p>
         </div>
       </div>
 
       {/* Nav */}
       <LayoutGroup>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4 scrollbar-hide">
           {sidebarLinks.map((link) => {
             const isActive = link.exact
               ? pathname === link.href
@@ -91,36 +106,56 @@ export default function DashboardLayout({
             const Icon = link.icon;
 
             return (
-              <Link key={link.href} href={link.href}>
+              <Link key={link.href} href={link.href} className="block">
                 <motion.div
-                  whileHover={{ x: isActive ? 0 : 3 }}
+                  whileHover="hover"
                   whileTap={{ scale: 0.98 }}
-                  className="relative"
+                  initial="rest"
+                  animate="rest"
+                  className="group relative"
                 >
                   {isActive && (
                     <motion.div
                       layoutId="active-nav-bg"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      transition={SPRING}
                       className="absolute inset-0 rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_hsl(var(--primary)/0.15)]"
+                    />
+                  )}
+                  {!isActive && (
+                    <motion.div
+                      variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute inset-0 rounded-xl bg-muted/60"
                     />
                   )}
                   {isActive && (
                     <motion.span
                       layoutId="active-nav-bar"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary"
+                      transition={SPRING}
+                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
                     />
                   )}
                   <Button
                     variant="ghost"
-                    className={`relative z-10 mb-1 h-10 w-full justify-start gap-3 rounded-xl bg-transparent transition-colors duration-200 hover:bg-transparent ${
+                    className={`relative z-10 mb-0.5 h-10 w-full justify-start gap-3 rounded-xl bg-transparent px-3 transition-colors duration-200 hover:bg-transparent focus-visible:bg-transparent ${
                       isActive
-                        ? "font-semibold text-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "font-semibold text-primary hover:text-primary"
+                        : "text-muted-foreground hover:text-foreground focus-visible:text-foreground"
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                    <span className="truncate">{link.label}</span>
+                    <motion.span
+                      variants={{
+                        rest: { x: 0, scale: 1 },
+                        hover: { x: isActive ? 0 : 2, scale: isActive ? 1 : 1.08 },
+                      }}
+                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                      className="flex shrink-0 items-center"
+                    >
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`}
+                      />
+                    </motion.span>
+                    <span className="truncate text-[13.5px]">{link.label}</span>
                   </Button>
                 </motion.div>
               </Link>
@@ -131,23 +166,27 @@ export default function DashboardLayout({
 
       {/* Account card */}
       <div className="mt-auto shrink-0 border-t border-border/50 bg-muted/10 p-4">
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 px-3 py-2.5 shadow-sm backdrop-blur">
+        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 px-3 py-2.5 shadow-sm backdrop-blur-md transition-colors hover:border-border">
           <div className="relative h-9 w-9 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-[0_2px_8px_-1px_hsl(var(--primary)/0.5)]">
               {session?.user?.name?.charAt(0).toUpperCase() || "U"}
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500">
               <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500/70" />
             </span>
           </div>
-          <div className="overflow-hidden">
-            <p className="truncate text-sm font-medium">{session?.user?.name || "User"}</p>
-            <p className="truncate text-xs text-muted-foreground">{session?.user?.email}</p>
+          <div className="min-w-0 overflow-hidden">
+            <p className="truncate text-sm font-medium text-foreground">
+              {session?.user?.name || "User"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {session?.user?.email}
+            </p>
           </div>
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 rounded-xl text-destructive transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="w-full justify-start gap-3 rounded-xl text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.98]"
           onClick={async () => {
             await signOut();
             window.location.href = "/login";
@@ -166,8 +205,9 @@ export default function DashboardLayout({
       <Button
         variant="ghost"
         size="icon"
-        className="fixed left-4 top-[4.5rem] z-40 rounded-xl border bg-background/80 shadow-sm backdrop-blur md:hidden"
+        className="fixed left-4 top-[4.5rem] z-40 rounded-full border border-border/60 bg-background/80 shadow-lg backdrop-blur-md transition-transform duration-200 hover:scale-105 hover:bg-background active:scale-95 md:hidden"
         onClick={() => setMobileOpen(true)}
+        aria-label="Open sidebar menu"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -194,13 +234,14 @@ export default function DashboardLayout({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 26, stiffness: 220 }}
-            className="fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col border-r bg-background/95 shadow-2xl backdrop-blur-xl md:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-[85vw] max-w-[280px] flex-col border-r border-border/50 bg-background/95 shadow-2xl backdrop-blur-xl md:hidden"
           >
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-4 rounded-xl hover:bg-muted"
+              className="absolute right-4 top-4 z-10 rounded-full hover:bg-muted"
               onClick={() => setMobileOpen(false)}
+              aria-label="Close sidebar menu"
             >
               <X className="h-5 w-5" />
             </Button>
@@ -226,7 +267,7 @@ export default function DashboardLayout({
 /*  Main content ambience: subtle grid + noise + cursor spotlight.         */
 /*  Presentational only — no functional impact.                            */
 /* ---------------------------------------------------------------------- */
-function MainArea({ children }: { children: React.ReactNode }) {
+function MainArea({ children }: { children: ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0.5);
   const mouseY = useMotionValue(0.5);
@@ -248,7 +289,10 @@ function MainArea({ children }: { children: React.ReactNode }) {
   }, [mouseX, mouseY]);
 
   return (
-    <main ref={containerRef} className="relative min-h-full flex-1 overflow-x-hidden">
+    <main
+      ref={containerRef}
+      className="relative min-h-full flex-1 overflow-x-hidden px-4 py-6 sm:px-6 lg:px-8"
+    >
       {/* Ambient gradient wash */}
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background" />
 
@@ -259,15 +303,22 @@ function MainArea({ children }: { children: React.ReactNode }) {
           backgroundImage:
             "linear-gradient(to right, hsl(var(--border)/0.35) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--border)/0.35) 1px, transparent 1px)",
           backgroundSize: "42px 42px",
-          maskImage: "radial-gradient(ellipse 70% 60% at 70% 0%, black 40%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 70% 0%, black 40%, transparent 100%)",
+          maskImage:
+            "radial-gradient(ellipse 70% 60% at 70% 0%, black 40%, transparent 100%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 70% 60% at 70% 0%, black 40%, transparent 100%)",
         }}
       />
 
       {/* Noise texture */}
       <svg className="pointer-events-none absolute inset-0 -z-10 h-full w-full opacity-[0.025] mix-blend-overlay">
         <filter id="dashNoise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" />
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.8"
+            numOctaves={2}
+            stitchTiles="stitch"
+          />
         </filter>
         <rect width="100%" height="100%" filter="url(#dashNoise)" />
       </svg>
