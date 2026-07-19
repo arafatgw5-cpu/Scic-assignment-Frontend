@@ -25,18 +25,18 @@ import {
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
 
-interface ProfileForm {
+type ProfileForm = {
   firstName: string;
   lastName: string;
   headline: string;
   location: string;
-}
+};
 
-interface PasswordForm {
+type PasswordForm = {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
-}
+};
 
 type ProfileErrors = Partial<Record<keyof ProfileForm, string>>;
 type PasswordErrors = Partial<Record<keyof PasswordForm, string>>;

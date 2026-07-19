@@ -8,9 +8,9 @@ async function getAuthToken(): Promise<string | null> {
   if (cachedAuthToken) return cachedAuthToken;
   try {
     const res = await fetch('/api/auth/token', { credentials: 'include' });
-    const data = await res.json();
+    const data = (await res.json()) as { token?: string };
     console.log("Token API Response (Global):", data);
-    
+
     if (data.token) {
       cachedAuthToken = data.token;
       return cachedAuthToken;
@@ -129,7 +129,7 @@ export class ApiClient {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = (await response.json().catch(() => ({}))) as { message?: string };
         throw new Error(errorData.message || `HTTP Error: ${response.status} ${response.statusText}`);
       }
 
@@ -140,10 +140,13 @@ export class ApiClient {
       }
 
       return (json as ApiSuccessResponse<T>).data;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`API Request Failed: ${url}`, error);
-      
-      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+
+      const msg = error instanceof Error ? error.message : String(error);
+      const name = error instanceof Error ? error.name : '';
+
+      if (msg.includes('Failed to fetch') || name === 'TypeError') {
         throw new Error(
           'Network Error: Cannot connect to the backend server.\n' +
           'Please check:\n' +
@@ -152,7 +155,7 @@ export class ApiClient {
           '3. Are there CORS issues in the browser console?'
         );
       }
-      
+
       throw error;
     }
   }
@@ -179,13 +182,13 @@ export class ApiClient {
   }
 
   // ─── Profile ─────────────────────────────────────────────────────
-  async updateProfile(data: any): Promise<any> {
-    return this.put<any>("/profile", data);
+  async updateProfile(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return this.put<Record<string, unknown>>("/profile", data);
   }
 
   // ✅ FIXED: Change Password API Call
-  async changePassword(currentPassword: string, newPassword: string): Promise<any> {
-    return this.post<any>("/auth/change-password", { currentPassword, newPassword });
+  async changePassword(currentPassword: string, newPassword: string): Promise<Record<string, unknown>> {
+    return this.post<Record<string, unknown>>("/auth/change-password", { currentPassword, newPassword });
   }
 
   // ─── Resumes ─────────────────────────────────────────────────────
@@ -193,7 +196,7 @@ export class ApiClient {
     return this.get<ResumeDocument[]>("/resumes");
   }
 
-  async createResume(data: Partial<ResumeDocument> | Record<string, any>): Promise<ResumeDocument> {
+  async createResume(data: Record<string, unknown>): Promise<ResumeDocument> {
     return this.post<ResumeDocument>("/resumes", data);
   }
 
@@ -208,11 +211,16 @@ export class ApiClient {
     projects?: { name: string; description: string }[];
     education?: { institution: string; degree: string; year?: string }[];
     achievements?: string[];
+    // Optional extras the resume builder sends; backend safely ignores them.
+    targetCompany?: string;
+    keywords?: string;
+    preferences?: Record<string, unknown>;
   }): Promise<GeneratedResume> {
     try {
       return await this.post<GeneratedResume>("/ai/generate-resume", data as unknown as Record<string, unknown>);
-    } catch (error: any) {
-      if (error.message?.includes('quota') || error.message?.includes('429')) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('quota') || msg.includes('429')) {
         console.warn("Using mock resume data due to API quota limit.");
         return {
           professionalSummary: "An experienced professional with a track record of delivering high-quality results. Skilled in modern technologies and team leadership. (MOCK DATA)",
@@ -235,8 +243,9 @@ export class ApiClient {
   async analyzeResume(resumeText: string): Promise<ResumeAnalysis> {
     try {
       return await this.post<ResumeAnalysis>("/ai/analyze-resume", { resumeText });
-    } catch (error: any) {
-      if (error.message?.includes('quota') || error.message?.includes('429')) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('quota') || msg.includes('429')) {
         console.warn("Using mock analysis data due to API quota limit.");
         return {
           atsScore: 78,
@@ -267,23 +276,24 @@ export class ApiClient {
     return this.get<CareerDocument[]>(`/careers${queryString}`);
   }
 
-  async saveCareer(id: string): Promise<any> {
-    return this.post<any>(`/careers/${id}/save`, {});
+  async saveCareer(id: string): Promise<Record<string, unknown>> {
+    return this.post<Record<string, unknown>>(`/careers/${id}/save`, {});
   }
 
-  async getSavedCareers(): Promise<any[]> {
-    return this.get<any[]>("/careers/saved");
+  async getSavedCareers(): Promise<Record<string, unknown>[]> {
+    return this.get<Record<string, unknown>[]>("/careers/saved");
   }
 
-  // ─── Recommendations ─────────────────────────────────────────────
+  // ─── Recommendations ────────────────────────────────────────────
   async getRecommendations(): Promise<CareerRecommendation[]> {
     try {
       return await this.post<CareerRecommendation[]>("/ai/recommend-careers", {
         resumeData: null,
         savedCareers: [],
       });
-    } catch (error: any) {
-      if (error.message?.includes('quota') || error.message?.includes('429')) {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('quota') || msg.includes('429')) {
         console.warn("Using mock recommendation data due to API quota limit.");
         return [
           {
@@ -313,8 +323,38 @@ export class ApiClient {
     return this.post<{ success: boolean; message: string }>("/newsletter/subscribe", { email });
   }
 
+  // ─── ✅ AI Text Actions (rewrite / grammar / shorten / strengthen / ATS) ──
+  // Powers the resume-builder AI buttons. Returns the rewritten text.
+  async aiTextAction(params: {
+    action: string;
+    text?: string;
+    context?: string;
+    targetRole?: string;
+  }): Promise<{ result: string }> {
+    try {
+      return await this.post<{ result: string }>(
+        "/ai/text-action",
+        params as unknown as Record<string, unknown>
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.includes('quota') || msg.includes('429')) {
+        console.warn("Using mock text-action result due to API quota limit.");
+        if (params.action === 'generate-summary') {
+          const role = params.targetRole || 'professional';
+          return {
+            result: `Results-driven ${role} with a proven track record of delivering high-impact solutions, leveraging modern technologies to drive performance and cross-functional collaboration. (Offline mock — connect AI for the live version)`,
+          };
+        }
+        // For rewrite/grammar/etc. just echo the original text so the UI doesn't break.
+        return { result: params.text || '' };
+      }
+      throw error;
+    }
+  }
+
   // ─── PDF Generation ──────────────────────────────────────────────
-  async downloadResumePdf(resumeData: GeneratedResume | ResumeDocument, filename: string = 'resume.pdf'): Promise<void> {
+  async downloadResumePdf(resumeData: Record<string, unknown>, filename: string = 'resume.pdf'): Promise<void> {
     const url = `${API_BASE_URL}/resumes/generate-pdf`;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     const token = await getAuthToken();
@@ -330,7 +370,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      const errorJson = await response.json().catch(() => ({}));
+      const errorJson = (await response.json().catch(() => ({}))) as { message?: string };
       throw new Error(errorJson.message || "Failed to generate PDF");
     }
 

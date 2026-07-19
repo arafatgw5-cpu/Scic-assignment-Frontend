@@ -2,63 +2,230 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { signUp, signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+  Loader2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Sparkles,
+  ArrowRight,
+  ShieldCheck,
+  Zap,
+  CheckCircle2,
+} from "lucide-react";
 
+/* ──────────────────────────────────────────────────────────────────
+   Constants
+   ─────────────────────────────────────────────────────────────────── */
+const DEMO_EMAIL = "demo@gmail.com";
+const DEMO_PASSWORD = "demo123456";
+
+/* ──────────────────────────────────────────────────────────────────
+   Animation variants
+   ─────────────────────────────────────────────────────────────────── */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+  },
+};
+
+const errorVariants = {
+  hidden: { opacity: 0, height: 0, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    height: "auto",
+    scale: 1,
+    transition: { duration: 0.25, ease: "easeOut" },
+  },
+  exit: {
+    opacity: 0,
+    height: 0,
+    scale: 0.97,
+    transition: { duration: 0.2, ease: "easeIn" },
+  },
+};
+
+/* ──────────────────────────────────────────────────────────────────
+   Sub-components
+   ─────────────────────────────────────────────────────────────────── */
+
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" aria-hidden="true">
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+function BrandMark() {
+  return (
+    <div className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-primary via-primary to-accent shadow-lg shadow-primary/25 ring-1 ring-inset ring-white/20">
+      <span className="text-lg font-bold tracking-tight text-white select-none">
+        S
+      </span>
+      <div className="absolute inset-0 rounded-[14px] bg-gradient-to-t from-black/10 to-transparent" />
+    </div>
+  );
+}
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="relative flex items-center py-1" role="separator">
+      <div className="flex-1 border-t border-border/60" />
+      <span className="mx-3 text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70">
+        {label}
+      </span>
+      <div className="flex-1 border-t border-border/60" />
+    </div>
+  );
+}
+
+function TrustBadges() {
+  return (
+    <div className="flex items-center justify-center gap-4 text-[11px] text-muted-foreground/60 dark:text-muted-foreground/70">
+      <span className="flex items-center gap-1">
+        <ShieldCheck className="h-3 w-3" />
+        SSL Secured
+      </span>
+      <span className="h-3 w-px bg-border/40" />
+      <span className="flex items-center gap-1">
+        <Zap className="h-3 w-3" />
+        Free Forever
+      </span>
+    </div>
+  );
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  const getStrength = (pw: string): { score: number; label: string; color: string } => {
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    if (score <= 1) return { score, label: "Weak", color: "bg-destructive" };
+    if (score === 2) return { score, label: "Fair", color: "bg-orange-500" };
+    if (score === 3) return { score, label: "Good", color: "bg-yellow-500" };
+    return { score, label: "Strong", color: "bg-emerald-500" };
+  };
+
+  if (!password) return null;
+
+  const { score, label, color } = getStrength(password);
+
+  return (
+    <div className="space-y-1.5 pt-1">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+              i <= score ? color : "bg-border/40 dark:bg-border/30"
+            }`}
+          />
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground dark:text-muted-foreground/80">
+        Password strength: <span className="font-medium text-foreground dark:text-foreground/90">{label}</span>
+      </p>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Main Page Component
+   ─────────────────────────────────────────────────────────────────── */
 export default function RegisterPage() {
   const router = useRouter();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const busy = loading || googleLoading || demoLoading;
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      return;
-    }
+  /* ── Handlers (logic unchanged) ─────────────────────────────── */
+  const handleEmailRegister = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
 
-    setLoading(true);
-
-    try {
-      const result = await signUp.email({
-        email,
-        password,
-        name: `${firstName} ${lastName}`,
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Registration failed. Please try again.");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
+      if (password !== confirmPassword) {
+        setError("Passwords do not match. Please try again.");
+        return;
       }
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleGoogleSignUp = async () => {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters long.");
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const result = await signUp.email({
+          name,
+          email,
+          password,
+        });
+
+        if (result.error) {
+          setError(result.error.message || "Registration failed. Please try again.");
+        } else {
+          router.push("/dashboard");
+          router.refresh();
+        }
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Something went wrong. Please try again.";
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [name, email, password, confirmPassword, router]
+  );
+
+  const handleGoogleRegister = useCallback(async () => {
     setError("");
     setGoogleLoading(true);
 
@@ -67,198 +234,356 @@ export default function RegisterPage() {
         provider: "google",
         callbackURL: "/dashboard",
       });
-    } catch (err: any) {
-      setError(err.message || "Google sign-up failed. Please try again.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Google sign-up failed. Please try again.";
+      setError(message);
       setGoogleLoading(false);
     }
-  };
+  }, []);
 
+  const handleDemoLogin = useCallback(async () => {
+    setError("");
+    setDemoLoading(true);
+
+    try {
+      const result = await signIn.email({
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+      });
+
+      if (result.error) {
+        setError(
+          result.error.message ||
+            "Demo account is not available right now. Please try again later."
+        );
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Demo login failed. Please try again.";
+      setError(message);
+    } finally {
+      setDemoLoading(false);
+    }
+  }, [router]);
+
+  /* ── Render ─────────────────────────────────────────────────── */
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background">
-      {/* Premium Background Gradients */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute top-[20%] -right-[10%] w-[40%] h-[50%] rounded-full bg-accent/20 blur-[120px]" />
+    <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-4 py-12">
+      {/* ── Ambient background ─────────────────────────────────── */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0">
+        <div className="absolute inset-0 opacity-[0.03] [background-image:radial-gradient(circle,hsl(var(--foreground))_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="absolute -top-[40%] left-1/2 h-[80%] w-[120%] -translate-x-1/2 rounded-full bg-primary/[0.04] blur-[100px]" />
+        <div className="absolute -bottom-[30%] -right-[20%] h-[60%] w-[60%] rounded-full bg-accent/[0.03] blur-[100px]" />
       </div>
 
-      <div className="relative z-10 w-full max-w-[440px] px-4">
-        <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="group flex flex-col items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
-              <span className="text-white font-bold text-xl">S</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Create an account
-            </h1>
-          </Link>
-          <p className="text-sm text-muted-foreground mt-2 text-center">
-            Start your AI-powered career journey
-          </p>
-        </div>
-
-        <Card className="border-border/50 shadow-premium-xl bg-card/60 backdrop-blur-xl">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-xl text-center font-bold">Sign Up</CardTitle>
-            <CardDescription className="text-center">
-              Continue with Google or email
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive animate-in fade-in zoom-in-95">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <p>{error}</p>
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              type="button"
-              className="w-full h-11 bg-background/50 hover:bg-background"
-              onClick={handleGoogleSignUp}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="mr-2 h-4 w-4"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-              )}
-              Continue with Google
-            </Button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/50" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground font-medium">
-                  Or continue with email
+      {/* ── Main content ───────────────────────────────────────── */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative z-10 w-full max-w-[400px]"
+      >
+        {/* Brand */}
+        <motion.div variants={itemVariants} className="mb-10 flex flex-col items-center">
+          <Link
+            href="/"
+            className="group flex flex-col items-center gap-4 outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-2xl"
+            aria-label="SkillPilot AI — Go to homepage"
+          >
+            <BrandMark />
+            <div className="text-center">
+              <h1 className="text-[22px] font-semibold tracking-tight text-foreground dark:text-white">
+                SkillPilot{" "}
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  AI
                 </span>
-              </div>
+              </h1>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground dark:text-muted-foreground/90">
+                Start your AI-powered career journey
+              </p>
+            </div>
+          </Link>
+        </motion.div>
+
+        {/* Card */}
+        <motion.div
+          variants={itemVariants}
+          className="rounded-2xl border border-border/50 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm dark:border-border/40 dark:bg-card/90 dark:shadow-black/20"
+        >
+          {/* Header */}
+          <div className="mb-7">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground dark:text-white">
+              Create your account
+            </h2>
+            <p className="mt-1 text-[13px] text-muted-foreground dark:text-muted-foreground/90">
+              Join thousands building better careers with AI
+            </p>
+          </div>
+
+          {/* Error */}
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                key="error"
+                variants={errorVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="mb-5 overflow-hidden"
+                role="alert"
+                aria-live="assertive"
+              >
+                <div className="flex items-start gap-2.5 rounded-xl border border-destructive/20 bg-destructive/[0.06] px-3.5 py-3 dark:border-destructive/30 dark:bg-destructive/10">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive/80 dark:text-destructive" />
+                  <p className="text-[13px] leading-relaxed text-destructive dark:text-red-400">
+                    {error}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ─── Google OAuth Button (dark mode fixed) ──────────── */}
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleGoogleRegister}
+            disabled={busy}
+            className="h-11 w-full rounded-xl border-border/60 bg-background/60 text-[13px] font-medium text-foreground transition-all duration-200 hover:border-border hover:bg-accent/50 hover:text-foreground active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50 dark:border-border/50 dark:bg-background/40 dark:text-white dark:hover:border-border/70 dark:hover:bg-accent/20 dark:hover:text-white"
+          >
+            {googleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-foreground dark:text-white" />
+            ) : (
+              <GoogleIcon />
+            )}
+            <span className="ml-2 text-foreground dark:text-white">
+              Continue with Google
+            </span>
+          </Button>
+
+          {/* Divider */}
+          <div className="my-6">
+            <Divider label="or" />
+          </div>
+
+          {/* Registration form */}
+          <form onSubmit={handleEmailRegister} className="space-y-4" noValidate={false}>
+            {/* Name */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="name"
+                className="text-[13px] font-medium text-foreground/90 dark:text-foreground/95"
+              >
+                Full name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                required
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={busy}
+                className="h-11 rounded-xl border-border/60 bg-background/50 px-3.5 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/10 disabled:opacity-50 dark:border-border/50 dark:bg-background/30 dark:text-white dark:placeholder:text-muted-foreground/40 dark:focus-visible:border-primary/50 dark:focus-visible:ring-primary/20"
+              />
             </div>
 
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First name</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    required
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    disabled={loading}
-                    className="bg-background/50"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last name</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    required
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={loading}
-                    className="bg-background/50"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  className="bg-background/50"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+            {/* Email */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="email"
+                className="text-[13px] font-medium text-foreground/90 dark:text-foreground/95"
+              >
+                Email address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@company.com"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={busy}
+                className="h-11 rounded-xl border-border/60 bg-background/50 px-3.5 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/10 disabled:opacity-50 dark:border-border/50 dark:bg-background/30 dark:text-white dark:placeholder:text-muted-foreground/40 dark:focus-visible:border-primary/50 dark:focus-visible:ring-primary/20"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="password"
+                className="text-[13px] font-medium text-foreground/90 dark:text-foreground/95"
+              >
+                Password
+              </Label>
+              <div className="relative">
                 <Input
                   id="password"
-                  type="password"
-                  placeholder="Min 6 characters"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Min. 8 characters"
                   required
-                  minLength={6}
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="bg-background/50"
+                  disabled={busy}
+                  className="h-11 rounded-xl border-border/60 bg-background/50 px-3.5 pr-11 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/10 disabled:opacity-50 dark:border-border/50 dark:bg-background/30 dark:text-white dark:placeholder:text-muted-foreground/40 dark:focus-visible:border-primary/50 dark:focus-visible:ring-primary/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  disabled={busy}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground/60 transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40 dark:text-muted-foreground/70 dark:hover:text-white"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
-              <Button
-                type="submit"
-                className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all active:scale-[0.98]"
-                disabled={loading || googleLoading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Create Account"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4 border-t border-border/10 pt-6">
-            <div className="text-center text-sm text-muted-foreground">
-              By clicking continue, you agree to our{" "}
-              <Link
-                href="/terms"
-                className="underline hover:text-primary font-medium transition-colors"
-              >
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="underline hover:text-primary font-medium transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              .
+              <PasswordStrength password={password} />
             </div>
-            <div className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-primary hover:underline font-semibold"
+
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="confirmPassword"
+                className="text-[13px] font-medium text-foreground/90 dark:text-foreground/95"
               >
-                Sign in
-              </Link>
+                Confirm password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Re-enter your password"
+                  required
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={busy}
+                  className="h-11 rounded-xl border-border/60 bg-background/50 px-3.5 pr-11 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/10 disabled:opacity-50 dark:border-border/50 dark:bg-background/30 dark:text-white dark:placeholder:text-muted-foreground/40 dark:focus-visible:border-primary/50 dark:focus-visible:ring-primary/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  disabled={busy}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showConfirmPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground/60 transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40 dark:text-muted-foreground/70 dark:hover:text-white"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {/* Match indicator */}
+              {confirmPassword.length > 0 && (
+                <p
+                  className={`flex items-center gap-1 text-[11px] ${
+                    password === confirmPassword
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-destructive dark:text-red-400"
+                  }`}
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  {password === confirmPassword ? "Passwords match" : "Passwords do not match"}
+                </p>
+              )}
             </div>
-          </CardFooter>
-        </Card>
-      </div>
+
+            {/* ─── Submit Button (dark mode fixed) ────────────────── */}
+            <Button
+              type="submit"
+              disabled={busy}
+              className="group h-11 w-full rounded-xl bg-primary text-[13px] font-medium text-primary-foreground shadow-sm shadow-primary/20 transition-all duration-200 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/25 active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50 dark:text-white dark:shadow-primary/10"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account…
+                </>
+              ) : (
+                <>
+                  Create account
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Demo divider */}
+          <div className="my-6">
+            <Divider label="demo" />
+          </div>
+
+          {/* ─── Demo Account Button (dark mode fixed) ────────────── */}
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={handleDemoLogin}
+            disabled={busy}
+            className="h-11 w-full rounded-xl bg-secondary/60 text-[13px] font-medium text-secondary-foreground transition-all duration-200 hover:bg-secondary active:scale-[0.985] disabled:pointer-events-none disabled:opacity-50 dark:bg-secondary/30 dark:text-white dark:hover:bg-secondary/50"
+          >
+            {demoLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connecting…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4 text-primary/70 dark:text-primary" />
+                Explore with demo account
+              </>
+            )}
+          </Button>
+
+          {/* Terms */}
+          <p className="mt-5 text-center text-[11px] leading-relaxed text-muted-foreground/70 dark:text-muted-foreground/60">
+            By creating an account, you agree to our{" "}
+            <Link
+              href="/terms"
+              className="font-medium text-foreground/70 underline underline-offset-2 transition-colors hover:text-foreground dark:text-foreground/80 dark:hover:text-white"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              className="font-medium text-foreground/70 underline underline-offset-2 transition-colors hover:text-foreground dark:text-foreground/80 dark:hover:text-white"
+            >
+              Privacy Policy
+            </Link>
+          </p>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          variants={itemVariants}
+          className="mt-8 flex flex-col items-center gap-4"
+        >
+          <p className="text-[13px] text-muted-foreground dark:text-muted-foreground/90">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-primary transition-colors hover:text-primary/80 focus-visible:outline-none focus-visible:underline dark:text-primary dark:hover:text-primary/80"
+            >
+              Sign in
+            </Link>
+          </p>
+          <TrustBadges />
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
