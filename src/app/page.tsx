@@ -28,7 +28,8 @@ import {
   ShieldCheck,
   Check,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  AlertCircle
 } from "lucide-react";
 import Hero from "@/components/Hero";
 
@@ -311,10 +312,10 @@ export default function Home() {
               
               <ul className="space-y-5 mb-10">
                 {[
-                  'ATS Keyword Optimization', 
-                  'Grammar & Tone Enhancement', 
-                  'Quantifiable Achievement Suggestions', 
-                  'Skill Gap Identification'
+                  { label: 'ATS Keyword Optimization', icon: CheckCircle }, 
+                  { label: 'Grammar & Tone Enhancement', icon: CheckCircle }, 
+                  { label: 'Quantifiable Achievement Suggestions', icon: CheckCircle }, 
+                  { label: 'Skill Gap Identification', icon: CheckCircle }
                 ].map((feature, i) => (
                   <motion.li
                     key={i}
@@ -325,9 +326,9 @@ export default function Home() {
                     className="flex items-center text-foreground/80 font-medium"
                   >
                     <div className="mr-4 flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Check className="h-4 w-4" />
+                      <feature.icon className="h-4 w-4" />
                     </div>
-                    {feature}
+                    {feature.label}
                   </motion.li>
                 ))}
               </ul>
@@ -379,14 +380,14 @@ export default function Home() {
                   {[
                     { label: "Impact Formatting", status: "Optimized", color: "text-emerald-500", icon: CheckCircle },
                     { label: "Keyword Density", status: "Strong", color: "text-emerald-500", icon: CheckCircle },
-                    { label: "Action Verbs", status: "Needs Work", color: "text-amber-500", icon: AlertCircle => <AlertCircle className="h-4 w-4 text-amber-500" /> },
+                    { label: "Action Verbs", status: "Needs Work", color: "text-amber-500", icon: AlertCircle },
                     { label: "Quantifiable Metrics", status: "7/10 Detected", color: "text-blue-500", icon: CheckCircle },
                   ].map((item, i) => (
                     <div key={i} className="flex justify-between items-center group">
                       <span className="text-muted-foreground group-hover:text-foreground transition-colors">{item.label}</span>
                       <div className="flex items-center gap-2">
                         <span className={`font-medium ${item.color}`}>{item.status}</span>
-                        {item.icon !== CheckCircle ? item.icon(CheckCircle) : <CheckCircle className={`h-4 w-4 ${item.color}`} />}
+                        <item.icon className={`h-4 w-4 ${item.color}`} />
                       </div>
                     </div>
                   ))}

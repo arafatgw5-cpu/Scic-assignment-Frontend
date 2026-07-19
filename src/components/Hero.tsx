@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion"; // Variants ইম্পোর্ট করলাম
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 // --- Animation Variants ---
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   show: { 
     opacity: 1, 
@@ -21,7 +21,7 @@ const fadeUp = {
   },
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -32,7 +32,7 @@ const staggerContainer = {
   },
 };
 
-const floatAnimation = {
+const floatAnimation: Variants = {
   initial: { y: 0 },
   animate: {
     y: [-10, 10, -10],
@@ -135,7 +135,6 @@ export default function HeroWithImage() {
                 alt="Professional woman working on laptop"
                 className="h-full w-full object-cover"
               />
-              {/* Overlay gradient for text readability if needed */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
             </div>
 
@@ -165,7 +164,6 @@ export default function HeroWithImage() {
               variants={floatAnimation}
               initial="initial"
               animate="animate"
-              transition={{ delay: 1, duration: 7, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -right-4 bottom-1/4 lg:bottom-1/3 rounded-2xl border border-border/50 bg-background/80 p-4 backdrop-blur-xl shadow-xl flex items-center gap-4"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
