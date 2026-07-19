@@ -12,7 +12,7 @@ import {
   BrainCircuit, Loader2, Sparkles, FileText, ArrowLeft,
   CheckCircle2, Edit, Download, AlertCircle, Save,
   Briefcase, Target, MessageSquare, AlignLeft, Building2, KeyRound,
-  Lightbulb, Copy, Check, Wand2,
+  Lightbulb, Copy, Check, Wand2, Eye, PenLine,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -83,7 +83,7 @@ function Stepper({ step }: { step: number }) {
     { n: 3, label: "Result" },
   ];
   return (
-    <div className="sticky top-16 z-30 mx-auto mb-10 w-full max-w-2xl rounded-2xl border border-border/50 bg-card/70 px-6 py-4 shadow-lg backdrop-blur-xl">
+    <div className="sticky top-4 z-30 mx-auto mb-10 w-full max-w-2xl rounded-2xl border border-border/50 bg-card/70 px-6 py-4 shadow-xl shadow-black/10 backdrop-blur-2xl">
       <div className="flex items-center justify-center">
         {steps.map((s, idx) => (
           <div key={s.n} className="flex w-full items-center last:w-auto">
@@ -157,7 +157,10 @@ function OptionSelector({
   return (
     <div className="space-y-2.5">
       <Label className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-        <Icon className="h-4 w-4 text-primary/70" /> {label}
+        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10">
+          <Icon className="h-3.5 w-3.5 text-primary" />
+        </span>
+        {label}
       </Label>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
@@ -169,10 +172,10 @@ function OptionSelector({
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => onChange(opt)}
-              className={`relative rounded-xl border px-3.5 py-2.5 text-left text-xs font-medium leading-snug shadow-sm backdrop-blur transition-colors ${
+              className={`relative rounded-xl border px-3.5 py-2.5 text-left text-xs font-medium leading-snug shadow-sm backdrop-blur transition-all ${
                 active
-                  ? "border-primary/50 bg-primary/10 text-primary shadow-primary/10"
-                  : "border-border/60 bg-background/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  ? "border-primary/60 bg-gradient-to-br from-primary/15 to-accent/10 text-primary shadow-primary/10 ring-1 ring-primary/30"
+                  : "border-border/60 bg-background/50 text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-background/80"
               }`}
             >
               {opt}
@@ -258,6 +261,41 @@ function GeneratingOverlay({ show }: { show: boolean }) {
   );
 }
 
+/* ---------------------------------------------------------------------- */
+/*  Auto-save indicator — purely a UI affordance. It debounces changes to  */
+/*  formData and mirrors the draft into localStorage so a refresh doesn't  */
+/*  lose progress. It does NOT call any API — no backend draft endpoint    */
+/*  exists, so this never touches api.* or generation/save logic.         */
+/* ---------------------------------------------------------------------- */
+const DRAFT_KEY = "resume-builder-draft-v1";
+
+function AutoSaveIndicator({ status }: { status: "idle" | "saving" | "saved" }) {
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={status}
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 4 }}
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+          status === "saved"
+            ? "bg-emerald-500/10 text-emerald-400"
+            : status === "saving"
+            ? "bg-amber-500/10 text-amber-400"
+            : "bg-muted/40 text-muted-foreground"
+        }`}
+      >
+        {status === "saving" ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Check className="h-3 w-3" />
+        )}
+        {status === "saving" ? "Saving…" : status === "saved" ? "Draft saved" : "Draft"}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export default function CreateResumePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -287,6 +325,45 @@ export default function CreateResumePage() {
     tone: "Professional & Direct",
     outputFormat: "Bullet-Heavy",
   });
+
+  /* ---- Draft hydration + autosave (UI-only, see note above) ---- */
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const hydrated = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft && typeof draft === "object") {
+          setFormData((prev) => ({ ...prev, ...draft }));
+        }
+      }
+    } catch {
+      // ignore malformed/unavailable storage — form just starts blank
+    } finally {
+      hydrated.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    setAutoSaveStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      try {
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+      } catch {
+        // ignore — non-critical
+      }
+      setAutoSaveStatus("saved");
+    }, 700);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -349,6 +426,12 @@ export default function CreateResumePage() {
         content: generatedData
       });
 
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
+      }
+
       router.push("/dashboard/resumes");
       router.refresh();
     } catch (err) {
@@ -369,6 +452,13 @@ export default function CreateResumePage() {
     }
   };
 
+  const skillChips = formData.skills
+    ? formData.skills.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+  const keywordChips = formData.keywords
+    ? formData.keywords.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
   return (
     <div className="relative mx-auto max-w-screen-2xl p-4 md:p-8 lg:p-10">
       <AmbientBackground />
@@ -378,20 +468,27 @@ export default function CreateResumePage() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
       >
-        <Link href="/dashboard/resumes" className="mb-4 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Resumes
-        </Link>
-        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
-          <span className="rounded-xl bg-primary/10 p-2">
-            <Wand2 className="h-7 w-7 text-primary" />
-          </span>
-          <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
-            AI Resume Generator
-          </span>
-        </h1>
-        <p className="mt-2 text-muted-foreground">Create a perfectly tailored resume that beats the ATS.</p>
+        <div>
+          <Link href="/dashboard/resumes" className="mb-4 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-primary">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Resumes
+          </Link>
+          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+            <span className="rounded-xl bg-primary/10 p-2 ring-1 ring-primary/20">
+              <Wand2 className="h-7 w-7 text-primary" />
+            </span>
+            <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
+              AI Resume Generator
+            </span>
+          </h1>
+          <p className="mt-2 text-muted-foreground">Create a perfectly tailored resume that beats the ATS.</p>
+        </div>
+        {step < 3 && (
+          <div className="sm:mt-1">
+            <AutoSaveIndicator status={autoSaveStatus} />
+          </div>
+        )}
       </motion.div>
 
       <Stepper step={step} />
@@ -427,7 +524,7 @@ export default function CreateResumePage() {
             transition={{ duration: 0.35, ease: "easeOut" }}
             className="mx-auto grid max-w-6xl grid-cols-1 gap-6 lg:grid-cols-3"
           >
-            <Card className="relative overflow-hidden rounded-2xl border-border/50 bg-card/60 shadow-xl backdrop-blur-xl lg:col-span-2">
+            <Card className="relative overflow-hidden rounded-2xl border-border/50 bg-card/60 shadow-xl shadow-black/10 backdrop-blur-xl lg:col-span-2">
               <CardHeader className="border-b border-border/50 bg-background/40 pb-6">
                 <CardTitle className="flex items-center gap-3 text-xl font-bold">
                   <div className="rounded-lg bg-primary/10 p-2">
@@ -448,7 +545,7 @@ export default function CreateResumePage() {
                       placeholder="e.g. Frontend Engineer"
                       value={formData.targetRole}
                       onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
-                      className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-primary/50"
+                      className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                   </div>
                   <div className="space-y-2.5">
@@ -460,7 +557,7 @@ export default function CreateResumePage() {
                       placeholder="e.g. Google, Brain Station 23"
                       value={formData.targetCompany}
                       onChange={(e) => setFormData({ ...formData, targetCompany: e.target.value })}
-                      className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-primary/50"
+                      className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                   </div>
                 </div>
@@ -474,7 +571,7 @@ export default function CreateResumePage() {
                     placeholder="e.g. React, TypeScript, Tailwind CSS, Next.js"
                     value={formData.skills}
                     onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                    className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-primary/50"
+                    className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                 </div>
 
@@ -487,18 +584,21 @@ export default function CreateResumePage() {
                     placeholder="e.g. performance optimization, state management, UI architecture"
                     value={formData.keywords}
                     onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
-                    className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-primary/50"
+                    className="h-12 rounded-xl border-border/60 bg-background/50 transition-all focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
                 </div>
 
                 <div className="space-y-2.5">
-                  <Label htmlFor="jd" className="text-sm font-semibold text-foreground/90">
-                    Job Description <span className="font-normal text-muted-foreground">(Optional but recommended)</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="jd" className="text-sm font-semibold text-foreground/90">
+                      Job Description <span className="font-normal text-muted-foreground">(Optional but recommended)</span>
+                    </Label>
+                    <span className="text-[11px] text-muted-foreground">{formData.jobDescription.length} chars</span>
+                  </div>
                   <Textarea
                     id="jd"
                     placeholder="Paste the job description here for maximum ATS optimization..."
-                    className="min-h-[160px] resize-y rounded-xl border-border/60 bg-background/50 p-4 leading-relaxed transition-all focus-visible:ring-primary/50"
+                    className="min-h-[160px] resize-y rounded-xl border-border/60 bg-background/50 p-4 leading-relaxed transition-all focus-visible:ring-2 focus-visible:ring-primary/40"
                     value={formData.jobDescription}
                     onChange={(e) => setFormData({ ...formData, jobDescription: e.target.value })}
                   />
@@ -517,8 +617,69 @@ export default function CreateResumePage() {
               </CardFooter>
             </Card>
 
-            {/* AI helper / tips sidebar — fills the extra width nicely */}
+            {/* Right column: live preview + tips — fills the extra width nicely */}
             <div className="space-y-4">
+              {/* Live preview, mirrors formData only — no new state or API calls */}
+              <Card className="overflow-hidden rounded-2xl border-border/50 bg-card/60 shadow-md backdrop-blur-xl">
+                <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 bg-background/40 py-4">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-semibold">Live Preview</h4>
+                  </div>
+                  <span className="rounded-full border border-border/50 bg-muted/30 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    updates as you type
+                  </span>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-5">
+                  <div>
+                    <p className="text-base font-bold leading-tight text-foreground">
+                      {formData.targetRole || "Your target role"}
+                    </p>
+                    {formData.targetCompany && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">at {formData.targetCompany}</p>
+                    )}
+                  </div>
+
+                  {skillChips.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Skills</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {skillChips.slice(0, 8).map((s) => (
+                          <span key={s} className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            {s}
+                          </span>
+                        ))}
+                        {skillChips.length > 8 && (
+                          <span className="rounded-md border border-border/50 bg-muted/30 px-2 py-0.5 text-[11px] text-muted-foreground">
+                            +{skillChips.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {keywordChips.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Keywords</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {keywordChips.slice(0, 6).map((k) => (
+                          <span key={k} className="rounded-md border border-accent/25 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent-foreground/90">
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!formData.targetRole && skillChips.length === 0 && (
+                    <div className="flex items-center gap-2 rounded-lg border border-dashed border-border/50 bg-background/30 p-3 text-xs text-muted-foreground">
+                      <PenLine className="h-3.5 w-3.5 shrink-0" />
+                      Fill in the form to see a live snapshot here.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="rounded-2xl border-primary/20 bg-primary/5 shadow-md backdrop-blur-xl">
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2 text-primary">
@@ -532,6 +693,7 @@ export default function CreateResumePage() {
                   </ul>
                 </CardContent>
               </Card>
+
               <Card className="rounded-2xl border-border/50 bg-card/60 shadow-md backdrop-blur-xl">
                 <CardContent className="space-y-3 pt-6">
                   <div className="flex items-center gap-2">
@@ -539,7 +701,7 @@ export default function CreateResumePage() {
                     <h4 className="font-semibold">What happens next</h4>
                   </div>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    In the next step you'll tune tone, focus, and format — then Gemini rewrites your
+                    In the next step you&apos;ll tune tone, focus, and format — then Gemini rewrites your
                     profile into a tailored, ATS-ready resume in seconds.
                   </p>
                 </CardContent>
@@ -557,7 +719,7 @@ export default function CreateResumePage() {
             transition={{ duration: 0.35, ease: "easeOut" }}
             className="mx-auto max-w-5xl"
           >
-            <Card className="relative overflow-hidden rounded-2xl border-border/50 bg-card/60 shadow-xl backdrop-blur-xl">
+            <Card className="relative overflow-hidden rounded-2xl border-border/50 bg-card/60 shadow-xl shadow-black/10 backdrop-blur-xl">
               <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5"></div>
               <CardHeader className="relative z-10 border-b border-border/50 bg-background/40 pb-6">
                 <CardTitle className="flex items-center gap-3 text-xl font-bold">

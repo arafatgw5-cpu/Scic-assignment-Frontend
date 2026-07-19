@@ -16,6 +16,7 @@ import {
   LogOut,
   BrainCircuit,
   Loader2,
+  Rocket,
   // LayoutTemplate,
   Download,
   Menu,
@@ -72,33 +73,28 @@ export default function DashboardLayout({
   const SidebarContent = () => (
     <>
       {/* Brand */}
-      <div className="flex items-center gap-3 p-6">
+      <div className="flex items-center gap-3 px-5 py-6">
         <motion.div
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-[0_4px_14px_-2px_hsl(var(--primary)/0.45)]"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_4px_16px_-2px_hsl(var(--primary)/0.5)]"
           animate={{
             boxShadow: [
-              "0 4px 14px -2px hsl(var(--primary)/0.25)",
-              "0 4px 20px -1px hsl(var(--primary)/0.5)",
-              "0 4px 14px -2px hsl(var(--primary)/0.25)",
+              "0 4px 14px -2px hsl(var(--primary)/0.3)",
+              "0 4px 22px -1px hsl(var(--primary)/0.55)",
+              "0 4px 14px -2px hsl(var(--primary)/0.3)",
             ],
           }}
           transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
         >
-          <span className="text-sm font-bold tracking-tight text-white">S</span>
+          <Rocket className="h-4.5 w-4.5 text-white" strokeWidth={2.25} />
         </motion.div>
-        <div>
-          <h2 className="text-base font-semibold tracking-tight text-foreground">
-            Dashboard
-          </h2>
-          <p className="mt-0.5 text-xs font-medium text-muted-foreground">
-            Manage your career
-          </p>
-        </div>
+        <h2 className="text-[15px] font-bold tracking-tight text-foreground">
+          SkillPilot <span className="text-primary">AI</span>
+        </h2>
       </div>
 
       {/* Nav */}
       <LayoutGroup>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4 scrollbar-hide">
+        <nav className="flex-1 space-y-3 overflow-y-auto px-4 pb-4 pt-1 scrollbar-hide">
           {sidebarLinks.map((link) => {
             const isActive = link.exact
               ? pathname === link.href
@@ -112,13 +108,18 @@ export default function DashboardLayout({
                   whileTap={{ scale: 0.98 }}
                   initial="rest"
                   animate="rest"
+                  variants={{
+                    rest: { y: 0 },
+                    hover: { y: isActive ? 0 : -1.5 },
+                  }}
+                  transition={{ type: "spring", stiffness: 400, damping: 22 }}
                   className="group relative"
                 >
                   {isActive && (
                     <motion.div
                       layoutId="active-nav-bg"
                       transition={SPRING}
-                      className="absolute inset-0 rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_18px_hsl(var(--primary)/0.15)]"
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary to-accent shadow-[0_4px_18px_-3px_hsl(var(--primary)/0.55)]"
                     />
                   )}
                   {!isActive && (
@@ -128,31 +129,24 @@ export default function DashboardLayout({
                       className="absolute inset-0 rounded-xl bg-muted/60"
                     />
                   )}
-                  {isActive && (
-                    <motion.span
-                      layoutId="active-nav-bar"
-                      transition={SPRING}
-                      className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]"
-                    />
-                  )}
                   <Button
                     variant="ghost"
-                    className={`relative z-10 mb-0.5 h-10 w-full justify-start gap-3 rounded-xl bg-transparent px-3 transition-colors duration-200 hover:bg-transparent focus-visible:bg-transparent ${
+                    className={`relative z-10 h-11 w-full justify-start gap-3 rounded-xl bg-transparent px-3.5 transition-colors duration-200 hover:bg-transparent focus-visible:bg-transparent ${
                       isActive
-                        ? "font-semibold text-primary hover:text-primary"
+                        ? "font-semibold text-white hover:text-white"
                         : "text-muted-foreground hover:text-foreground focus-visible:text-foreground"
                     }`}
                   >
                     <motion.span
                       variants={{
-                        rest: { x: 0, scale: 1 },
-                        hover: { x: isActive ? 0 : 2, scale: isActive ? 1 : 1.08 },
+                        rest: { x: 0, scale: 1, rotate: 0 },
+                        hover: { x: isActive ? 0 : 2, scale: isActive ? 1 : 1.1, rotate: isActive ? 0 : -4 },
                       }}
                       transition={{ type: "spring", stiffness: 400, damping: 20 }}
                       className="flex shrink-0 items-center"
                     >
                       <Icon
-                        className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`}
+                        className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : ""}`}
                       />
                     </motion.span>
                     <span className="truncate text-[13.5px]">{link.label}</span>
@@ -164,29 +158,11 @@ export default function DashboardLayout({
         </nav>
       </LayoutGroup>
 
-      {/* Account card */}
-      <div className="mt-auto shrink-0 border-t border-border/50 bg-muted/10 p-4">
-        <div className="mb-3 flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 px-3 py-2.5 shadow-sm backdrop-blur-md transition-colors hover:border-border">
-          <div className="relative h-9 w-9 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-sm font-bold text-white shadow-[0_2px_8px_-1px_hsl(var(--primary)/0.5)]">
-              {session?.user?.name?.charAt(0).toUpperCase() || "U"}
-            </div>
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500">
-              <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500/70" />
-            </span>
-          </div>
-          <div className="min-w-0 overflow-hidden">
-            <p className="truncate text-sm font-medium text-foreground">
-              {session?.user?.name || "User"}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {session?.user?.email}
-            </p>
-          </div>
-        </div>
+      {/* Logout — pushed to the absolute bottom */}
+      <div className="mt-auto shrink-0 px-4 pb-5 pt-3">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 rounded-xl text-destructive transition-all duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.98]"
+          className="w-full justify-start gap-3 rounded-xl text-muted-foreground transition-all duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.98]"
           onClick={async () => {
             await signOut();
             window.location.href = "/login";
@@ -251,9 +227,9 @@ export default function DashboardLayout({
       </AnimatePresence>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-16 relative hidden h-[calc(100vh-4rem)] w-[280px] shrink-0 flex-col border-r border-border/50 bg-card/80 backdrop-blur-xl md:flex">
+      <aside className="sticky top-16 relative hidden h-[calc(100vh-4rem)] w-[272px] shrink-0 flex-col border-r border-border/50 bg-card/80 backdrop-blur-xl md:flex">
         {/* gradient hairline on the edge for depth */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-primary/25 to-transparent" />
         <SidebarContent />
       </aside>
 

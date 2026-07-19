@@ -11,24 +11,18 @@ import { Label } from "@/components/ui/label";
 import {
   Mail,
   Shield,
-  Edit,
-  Save,
+  Edit2,
   X,
   Loader2,
-  Lock,
-  MapPin,
-  Briefcase,
   Eye,
   EyeOff,
   CheckCircle2,
   AlertCircle,
-  BadgeCheck,
-  Sparkles,
   User,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/* Types                                                               */
+/* Types                                                              */
 /* ------------------------------------------------------------------ */
 
 interface ProfileForm {
@@ -51,7 +45,7 @@ const EMPTY_PROFILE: ProfileForm = { firstName: "", lastName: "", headline: "", 
 const EMPTY_PASSWORD: PasswordForm = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
 /* ------------------------------------------------------------------ */
-/* Helpers                                                             */
+/* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -105,25 +99,26 @@ function getPasswordStrength(password: string): PasswordStrength {
     { score: 1, label: "Weak", colorClass: "bg-destructive" },
     { score: 2, label: "Fair", colorClass: "bg-yellow-500" },
     { score: 3, label: "Good", colorClass: "bg-yellow-500" },
-    { score: 4, label: "Strong", colorClass: "bg-green-500" },
-    { score: 5, label: "Very strong", colorClass: "bg-green-500" },
+    { score: 4, label: "Strong", colorClass: "bg-primary" },
+    { score: 5, label: "Very strong", colorClass: "bg-primary" },
   ];
 
   return levels[Math.min(score, 5)];
 }
 
 /* ------------------------------------------------------------------ */
-/* Motion variants                                                     */
+/* Motion variants                                                    */
 /* ------------------------------------------------------------------ */
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 16 },
+const fadeSlide = {
+  initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4 },
+  exit: { opacity: 0, y: -10 },
+  transition: { duration: 0.3, ease: "easeOut" },
 };
 
 /* ------------------------------------------------------------------ */
-/* Small reusable bits                                                 */
+/* Small reusable bits                                                */
 /* ------------------------------------------------------------------ */
 
 function StatusBanner({
@@ -138,29 +133,28 @@ function StatusBanner({
   const isSuccess = type === "success";
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8, height: 0 }}
-      animate={{ opacity: 1, y: 0, height: "auto" }}
-      exit={{ opacity: 0, y: -8, height: 0 }}
-      transition={{ duration: 0.25 }}
-      className={`flex items-center gap-2 overflow-hidden rounded-xl border p-3 text-sm shadow-sm ${
+      layout
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-sm shadow-sm ${
         isSuccess
-          ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
-          : "border-destructive/30 bg-destructive/10 text-destructive"
+          ? "border-primary/20 bg-primary/5 text-primary"
+          : "border-destructive/20 bg-destructive/5 text-destructive"
       }`}
       role="alert"
     >
       {isSuccess ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
-      <span className="flex-1">{message}</span>
-      <Button
+      <span className="flex-1 font-medium">{message}</span>
+      <button
         type="button"
-        variant="ghost"
-        size="sm"
-        className="ml-auto h-6 w-6 shrink-0 p-0"
+        className="shrink-0 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={onDismiss}
         aria-label="Dismiss"
       >
-        <X className="h-3.5 w-3.5" />
-      </Button>
+        <X className="h-4 w-4" />
+      </button>
     </motion.div>
   );
 }
@@ -168,43 +162,39 @@ function StatusBanner({
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="flex items-center gap-1 text-xs text-destructive">
+    <motion.p
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      id={id}
+      className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-destructive"
+    >
       <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {message}
-    </p>
+    </motion.p>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 md:p-8">
+    <div className="mx-auto max-w-4xl space-y-8 p-6 md:p-10">
       <div className="space-y-2">
         <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
         <div className="h-4 w-72 animate-pulse rounded-md bg-muted" />
       </div>
-      <div className="rounded-2xl border border-border/50 bg-card/60 p-6 md:p-8">
-        <div className="flex items-center gap-4">
-          <div className="h-20 w-20 animate-pulse rounded-full bg-muted" />
-          <div className="space-y-2">
-            <div className="h-5 w-40 animate-pulse rounded-md bg-muted" />
-            <div className="h-4 w-56 animate-pulse rounded-md bg-muted" />
-          </div>
-        </div>
+      <div className="space-y-6">
+        <div className="h-[400px] animate-pulse rounded-xl border border-border bg-card shadow-sm" />
+        <div className="h-[350px] animate-pulse rounded-xl border border-border bg-card shadow-sm" />
       </div>
-      <div className="h-64 animate-pulse rounded-2xl border border-border/50 bg-card/60" />
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Page                                                                 */
+/* Page                                                               */
 /* ------------------------------------------------------------------ */
 
 export default function ProfilePage() {
   const { data: session } = useSession();
 
-  // Session hooks that expose `undefined` while pending and either a
-  // session object or `null` once resolved are common; we use that shape
-  // without assuming extra fields to avoid guessing at an unknown type.
   const [hasMounted, setHasMounted] = useState(false);
   useEffect(() => setHasMounted(true), []);
   const sessionLoading = !hasMounted || session === undefined;
@@ -220,9 +210,6 @@ export default function ProfilePage() {
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [profileInitialized, setProfileInitialized] = useState(false);
 
-  // Initialize the form from session data once it becomes available,
-  // instead of reading it directly in useState (which can mismatch
-  // between server and client render passes).
   useEffect(() => {
     if (user && !profileInitialized) {
       const { firstName, lastName } = splitName(user.name);
@@ -273,7 +260,7 @@ export default function ProfilePage() {
   }, [user]);
 
   const handleSaveProfile = useCallback(async () => {
-    if (saving) return; // guard against duplicate submissions
+    if (saving) return;
 
     const validationErrors = validateProfile(form);
     setProfileErrors(validationErrors);
@@ -294,7 +281,7 @@ export default function ProfilePage() {
   }, [form, saving]);
 
   const handleChangePassword = useCallback(async () => {
-    if (changingPassword) return; // guard against duplicate submissions
+    if (changingPassword) return;
 
     const errors: PasswordErrors = {};
     if (!passwordForm.currentPassword) errors.currentPassword = "Enter your current password.";
@@ -316,9 +303,12 @@ export default function ProfilePage() {
       await api.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
       setSuccess("Password changed successfully.");
       setPasswordForm(EMPTY_PASSWORD);
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to change password."));
-      setPasswordForm(EMPTY_PASSWORD); // clear sensitive fields on failure too
+      setPasswordForm(EMPTY_PASSWORD);
     } finally {
       setChangingPassword(false);
       setPasswordErrors({});
@@ -330,339 +320,306 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 md:p-8">
-      <motion.div {...fadeInUp} className="mb-2">
-        <h1 className="text-3xl font-bold tracking-tight">My Profile</h1>
-        <p className="mt-1 text-muted-foreground">Manage your account details and personal information.</p>
+    <div className="mx-auto max-w-4xl space-y-8 p-6 pb-20 md:p-10">
+      {/* Header */}
+      <motion.div {...fadeSlide}>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Account Settings</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Manage your personal information, profile details, and security preferences.
+        </p>
       </motion.div>
 
-      {/* Status Messages */}
-      <AnimatePresence mode="popLayout">
-        {success && <StatusBanner key="success" type="success" message={success} onDismiss={() => setSuccess("")} />}
-        {error && <StatusBanner key="error" type="error" message={error} onDismiss={() => setError("")} />}
-      </AnimatePresence>
+      {/* Global Alerts */}
+      <div className="empty:hidden">
+        <AnimatePresence mode="popLayout">
+          {success && <StatusBanner key="success" type="success" message={success} onDismiss={() => setSuccess("")} />}
+          {error && <StatusBanner key="error" type="error" message={error} onDismiss={() => setError("")} />}
+        </AnimatePresence>
+      </div>
 
-      {/* Profile Header / Hero */}
-      <motion.div {...fadeInUp}>
-        <Card className="overflow-hidden border-border/50 bg-card/60 shadow-sm backdrop-blur-sm">
-          <div className="relative">
-            <div className="h-24 w-full bg-gradient-to-r from-primary/20 via-accent/20 to-primary/10" />
-            <CardContent className="relative -mt-12 pb-6 pt-0">
-              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-2xl font-bold text-primary-foreground shadow-lg ring-4 ring-background">
+      <div className="space-y-6">
+        {/* Profile Card */}
+        <motion.div {...fadeSlide} transition={{ delay: 0.05, duration: 0.3 }}>
+          <Card className="overflow-hidden border-border bg-card shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 bg-muted/10 px-6 py-5">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <User className="h-4 w-4 text-muted-foreground" /> Profile Information
+                </CardTitle>
+                <CardDescription className="text-sm">Update your public profile and personal details.</CardDescription>
+              </div>
+              {!editing && (
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)} className="hidden sm:flex h-8 gap-1.5">
+                  <Edit2 className="h-3.5 w-3.5" /> Edit Profile
+                </Button>
+              )}
+            </CardHeader>
+
+            <CardContent className="p-0">
+              <div className="px-6 py-6">
+                {/* Avatar Row */}
+                <div className="mb-8 flex items-center gap-5">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary ring-1 ring-primary/20">
                     {initials}
                   </div>
-                  <div className="pb-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-semibold">{user?.name || "Unnamed User"}</p>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                        <BadgeCheck className="h-3 w-3" /> Active
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{user?.email}</span>
-                    </div>
+                  <div>
+                    <h3 className="text-base font-medium text-foreground">{user?.name || "Unnamed User"}</h3>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
                   </div>
-                </div>
-                <Button
-                  type="button"
-                  variant={editing ? "ghost" : "outline"}
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => (editing ? handleCancelEdit() : setEditing(true))}
-                >
-                  {editing ? (
-                    <>
-                      <X className="h-4 w-4" /> Cancel
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-4 w-4" /> Edit Profile
-                    </>
+                  {!editing && (
+                    <Button variant="outline" size="icon" onClick={() => setEditing(true)} className="ml-auto sm:hidden h-8 w-8">
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                   )}
-                </Button>
-              </div>
-            </CardContent>
-          </div>
-        </Card>
-      </motion.div>
+                </div>
 
-      {/* Personal Information Card */}
-      <motion.div {...fadeInUp}>
-        <Card className="border-border/50 bg-card/60 shadow-sm backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <User className="h-5 w-5 text-primary" /> Personal Information
-            </CardTitle>
-            <CardDescription>Your basic account details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AnimatePresence mode="wait" initial={false}>
-              {editing ? (
-                <motion.div
-                  key="edit"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-4 overflow-hidden"
-                >
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <div className="relative">
-                        <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <AnimatePresence mode="wait">
+                  {editing ? (
+                    <motion.div
+                      key="edit"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="grid grid-cols-1 gap-6 sm:grid-cols-2"
+                    >
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
                         <Input
                           id="firstName"
-                          className="pl-9"
                           value={form.firstName}
                           onChange={handleProfileFieldChange("firstName")}
                           aria-invalid={!!profileErrors.firstName}
-                          aria-describedby={profileErrors.firstName ? "firstName-error" : undefined}
+                          className="h-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
                         />
+                        <FieldError id="firstName-error" message={profileErrors.firstName} />
                       </div>
-                      <FieldError id="firstName-error" message={profileErrors.firstName} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <div className="relative">
-                        <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
                         <Input
                           id="lastName"
-                          className="pl-9"
                           value={form.lastName}
                           onChange={handleProfileFieldChange("lastName")}
                           aria-invalid={!!profileErrors.lastName}
-                          aria-describedby={profileErrors.lastName ? "lastName-error" : undefined}
+                          className="h-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
                         />
+                        <FieldError id="lastName-error" message={profileErrors.lastName} />
                       </div>
-                      <FieldError id="lastName-error" message={profileErrors.lastName} />
-                    </div>
-                  </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="headline" className="text-sm font-medium">Professional Headline</Label>
+                        <Input
+                          id="headline"
+                          placeholder="e.g. Senior Frontend Engineer"
+                          value={form.headline}
+                          onChange={handleProfileFieldChange("headline")}
+                          aria-invalid={!!profileErrors.headline}
+                          className="h-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
+                        />
+                        <FieldError id="headline-error" message={profileErrors.headline} />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="location" className="text-sm font-medium">Location</Label>
+                        <Input
+                          id="location"
+                          placeholder="e.g. San Francisco, CA"
+                          value={form.location}
+                          onChange={handleProfileFieldChange("location")}
+                          aria-invalid={!!profileErrors.location}
+                          className="h-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
+                        />
+                        <FieldError id="location-error" message={profileErrors.location} />
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="view"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="grid grid-cols-1 gap-y-6 sm:grid-cols-2 gap-x-4 border-t border-border/40 pt-6"
+                    >
+                      <div>
+                        <dt className="text-[13px] font-medium text-muted-foreground">Full Name</dt>
+                        <dd className="mt-1 text-sm font-medium text-foreground">{user?.name || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[13px] font-medium text-muted-foreground">Email Address</dt>
+                        <dd className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                           {user?.email}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-[13px] font-medium text-muted-foreground">Headline</dt>
+                        <dd className="mt-1 text-sm font-medium text-foreground">{form.headline || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[13px] font-medium text-muted-foreground">Location</dt>
+                        <dd className="mt-1 text-sm font-medium text-foreground">{form.location || "—"}</dd>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </CardContent>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="headline" className="flex items-center gap-1">
-                      <Briefcase className="h-3 w-3" /> Professional Headline
-                    </Label>
-                    <div className="relative">
-                      <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="headline"
-                        className="pl-9"
-                        placeholder="e.g. Senior Frontend Engineer"
-                        value={form.headline}
-                        onChange={handleProfileFieldChange("headline")}
-                        aria-invalid={!!profileErrors.headline}
-                        aria-describedby={profileErrors.headline ? "headline-error" : undefined}
-                      />
-                    </div>
-                    <FieldError id="headline-error" message={profileErrors.headline} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="location" className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> Location
-                    </Label>
-                    <div className="relative">
-                      <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="location"
-                        className="pl-9"
-                        placeholder="e.g. San Francisco, CA"
-                        value={form.location}
-                        onChange={handleProfileFieldChange("location")}
-                        aria-invalid={!!profileErrors.location}
-                        aria-describedby={profileErrors.location ? "location-error" : undefined}
-                      />
-                    </div>
-                    <FieldError id="location-error" message={profileErrors.location} />
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2">
-                    <Button type="button" onClick={handleSaveProfile} disabled={saving} className="gap-2">
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      {saving ? "Saving..." : "Save Changes"}
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={handleCancelEdit} disabled={saving}>
-                      Cancel
-                    </Button>
-                  </div>
-                </motion.div>
-              ) : (
+            {/* Profile Card Footer (Only when editing) */}
+            <AnimatePresence>
+              {editing && (
                 <motion.div
-                  key="view"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="grid grid-cols-1 gap-4 overflow-hidden sm:grid-cols-2"
                 >
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Briefcase className="h-3.5 w-3.5" /> Headline
-                    </p>
-                    <p className="mt-1 text-sm">{form.headline || <span className="text-muted-foreground">Not set</span>}</p>
-                  </div>
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" /> Location
-                    </p>
-                    <p className="mt-1 text-sm">{form.location || <span className="text-muted-foreground">Not set</span>}</p>
-                  </div>
-                  <div className="rounded-xl border border-border/50 bg-muted/20 p-4 sm:col-span-2">
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                      <Mail className="h-3.5 w-3.5" /> Email
-                    </p>
-                    <p className="mt-1 text-sm">{user?.email}</p>
-                  </div>
+                  <CardFooter className="flex items-center justify-end gap-3 border-t border-border/40 bg-muted/10 px-6 py-4">
+                    <Button type="button" variant="ghost" onClick={handleCancelEdit} disabled={saving} className="h-9 px-4">
+                      Cancel
+                    </Button>
+                    <Button type="button" onClick={handleSaveProfile} disabled={saving} className="h-9 px-4">
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </CardFooter>
                 </motion.div>
               )}
             </AnimatePresence>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
 
-      {/* Change Password Card */}
-      <motion.div {...fadeInUp}>
-        <Card className="border-border/50 bg-card/60 shadow-sm backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Lock className="h-5 w-5 text-primary" /> Change Password
-            </CardTitle>
-            <CardDescription>Update your account password</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="currentPassword"
-                  type={showCurrentPassword ? "text" : "password"}
-                  className="pl-9 pr-10"
-                  value={passwordForm.currentPassword}
-                  onChange={handlePasswordFieldChange("currentPassword")}
-                  autoComplete="current-password"
-                  aria-invalid={!!passwordErrors.currentPassword}
-                  aria-describedby={passwordErrors.currentPassword ? "currentPassword-error" : undefined}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showCurrentPassword ? "Hide password" : "Show password"}
-                >
-                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              <FieldError id="currentPassword-error" message={passwordErrors.currentPassword} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="newPassword"
-                    type={showNewPassword ? "text" : "password"}
-                    className="pl-9 pr-10"
-                    value={passwordForm.newPassword}
-                    onChange={handlePasswordFieldChange("newPassword")}
-                    autoComplete="new-password"
-                    aria-invalid={!!passwordErrors.newPassword}
-                    aria-describedby={passwordErrors.newPassword ? "newPassword-error" : "newPassword-strength"}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showNewPassword ? "Hide password" : "Show password"}
-                  >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {passwordForm.newPassword && (
-                  <div id="newPassword-strength" className="space-y-1 pt-1">
-                    <div className="flex h-1.5 gap-1">
-                      {[0, 1, 2, 3, 4].map((i) => (
-                        <span
-                          key={i}
-                          className={`h-full flex-1 rounded-full transition-colors ${
-                            i < passwordStrength.score ? passwordStrength.colorClass : "bg-muted"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{passwordStrength.label}</p>
+        {/* Security Card */}
+        <motion.div {...fadeSlide} transition={{ delay: 0.1, duration: 0.3 }}>
+          <Card className="overflow-hidden border-border bg-card shadow-sm">
+            <CardHeader className="border-b border-border/40 bg-muted/10 px-6 py-5">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Shield className="h-4 w-4 text-muted-foreground" /> Security
+              </CardTitle>
+              <CardDescription className="text-sm">Update your password to keep your account secure.</CardDescription>
+            </CardHeader>
+            <CardContent className="px-6 py-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-2 md:col-span-2 md:w-1/2 md:pr-3">
+                  <Label htmlFor="currentPassword" className="text-sm font-medium">Current Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="currentPassword"
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={passwordForm.currentPassword}
+                      onChange={handlePasswordFieldChange("currentPassword")}
+                      autoComplete="current-password"
+                      aria-invalid={!!passwordErrors.currentPassword}
+                      className="h-10 pr-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((v) => !v)}
+                      className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md"
+                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                    >
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
-                )}
-                <FieldError id="newPassword-error" message={passwordErrors.newPassword} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    className="pl-9 pr-10"
-                    value={passwordForm.confirmPassword}
-                    onChange={handlePasswordFieldChange("confirmPassword")}
-                    autoComplete="new-password"
-                    aria-invalid={!!passwordErrors.confirmPassword}
-                    aria-describedby={passwordErrors.confirmPassword ? "confirmPassword-error" : undefined}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                  <FieldError id="currentPassword-error" message={passwordErrors.currentPassword} />
                 </div>
-                {passwordForm.confirmPassword && !passwordErrors.confirmPassword && (
-                  <p
-                    className={`flex items-center gap-1 text-xs ${
-                      passwordForm.confirmPassword === passwordForm.newPassword
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {passwordForm.confirmPassword === passwordForm.newPassword ? (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
-                      </>
-                    ) : (
-                      "Passwords must match"
-                    )}
-                  </p>
-                )}
-                <FieldError id="confirmPassword-error" message={passwordErrors.confirmPassword} />
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="border-t border-border/50 bg-muted/20 pt-4">
-            <Button
-              type="button"
-              onClick={handleChangePassword}
-              disabled={changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword}
-              className="gap-2"
-            >
-              {changingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-              {changingPassword ? "Updating..." : "Update Password"}
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
 
-      <motion.p {...fadeInUp} className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-        <Sparkles className="h-3.5 w-3.5" /> Your information is kept private and secure.
-      </motion.p>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="text-sm font-medium">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      value={passwordForm.newPassword}
+                      onChange={handlePasswordFieldChange("newPassword")}
+                      autoComplete="new-password"
+                      aria-invalid={!!passwordErrors.newPassword}
+                      className="h-10 pr-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((v) => !v)}
+                      className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  
+                  {/* Password Strength Indicator */}
+                  {passwordForm.newPassword && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-2">
+                      <div className="flex h-1 gap-1">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <span
+                            key={i}
+                            className={`h-full flex-1 rounded-full transition-colors duration-300 ${
+                              i < passwordStrength.score ? passwordStrength.colorClass : "bg-muted"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-[12px] font-medium text-muted-foreground">
+                        Strength: <span className="text-foreground">{passwordStrength.label}</span>
+                      </p>
+                    </motion.div>
+                  )}
+                  <FieldError id="newPassword-error" message={passwordErrors.newPassword} />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={passwordForm.confirmPassword}
+                      onChange={handlePasswordFieldChange("confirmPassword")}
+                      autoComplete="new-password"
+                      aria-invalid={!!passwordErrors.confirmPassword}
+                      className="h-10 pr-10 transition-shadow focus-visible:ring-1 focus-visible:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      className="absolute right-0 top-0 flex h-full w-10 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordForm.confirmPassword && !passwordErrors.confirmPassword && (
+                    <p
+                      className={`mt-1.5 flex items-center gap-1.5 text-[13px] font-medium ${
+                        passwordForm.confirmPassword === passwordForm.newPassword
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {passwordForm.confirmPassword === passwordForm.newPassword ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
+                        </>
+                      ) : (
+                        "Passwords must match"
+                      )}
+                    </p>
+                  )}
+                  <FieldError id="confirmPassword-error" message={passwordErrors.confirmPassword} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t border-border/40 bg-muted/10 px-6 py-4 flex justify-end">
+              <Button
+                type="button"
+                onClick={handleChangePassword}
+                disabled={changingPassword || !passwordForm.currentPassword || !passwordForm.newPassword}
+                className="h-9 px-4"
+              >
+                {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {changingPassword ? "Updating..." : "Update Password"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }
